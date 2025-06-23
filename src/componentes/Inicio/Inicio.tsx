@@ -57,7 +57,7 @@ function Inicio() {
   // Função para exibir o mapa de uma UPA específica
   const mostrarMapa = (endereco: string, upa: UPA | null = null) => {
     const encodedEndereco = encodeURIComponent(endereco);
-    const url = `http://127.0.0.1:8000/mapa?endereco=${encodedEndereco}`;
+    const url = `https://e14f-2804-14c-65c1-48de-00-1005.ngrok-free.app/mapa?endereco=${encodedEndereco}`;
     setMapaVisible(url);
     setUpaSelecionada(upa);
   };
@@ -78,22 +78,25 @@ function Inicio() {
       const cepFormatado = cepInput.trim().replace(/[^0-9]/g, '');
       
       // Passa apenas o CEP para a API de busca de UPAs
-      const url = `http://127.0.0.1:8000/upas-proximas?endereco=${encodeURIComponent(cepFormatado)}&raio=20`;
+      const url = `https://e14f-2804-14c-65c1-48de-00-1005.ngrok-free.app/upas-proximas?endereco=${encodeURIComponent(cepFormatado)}&raio=20`;
 
-      console.log("Buscando UPAs com o CEP:", cepFormatado);
-
-      const response = await fetch(url, {
+      console.log("Buscando UPAs com o CEP:", cepFormatado);      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
-      });
-
-      if (response.ok) {
-        const upas = await response.json();
-        console.log("UPAs encontradas:", upas);
-        setUpasProximas(Array.isArray(upas) ? upas : []);
-        setUpasModalOpen(true);
+      });      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const upas = await response.json();
+          console.log("UPAs encontradas:", upas);
+          setUpasProximas(Array.isArray(upas) ? upas : []);
+          setUpasModalOpen(true);
+        } else {
+          console.error("Resposta não é JSON:", contentType);
+          alert("Erro: Servidor retornou formato inválido. Verifique se o ngrok está configurado corretamente.");
+        }
       } else {
         const errorData = await response.json().catch(() => ({ message: "Erro desconhecido" }));
         console.error("Erro na resposta:", errorData);
@@ -156,22 +159,25 @@ function Inicio() {
         casat: formParaBackend.casat,
       }).toString();
 
-      const url = `http://127.0.0.1:8000/avaliar?${params}`;
-      console.log("Fazendo requisição para:", url);
-
-      const response = await fetch(url, {
+      const url = `https://e14f-2804-14c-65c1-48de-00-1005.ngrok-free.app/avaliar?${params}`;
+      console.log("Fazendo requisição para:", url);      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         mode: 'cors',
-      });
-
-      if (response.ok) {
-        const data: AvaliacaoResponse = await response.json();
-        console.log("Dados recebidos do backend:", data);
-        setResultadoConsulta(data);
+      });      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data: AvaliacaoResponse = await response.json();
+          console.log("Dados recebidos do backend:", data);
+          setResultadoConsulta(data);
+        } else {
+          console.error("Resposta não é JSON:", contentType);
+          alert("Erro: Servidor retornou formato inválido. Verifique se o ngrok está configurado corretamente.");
+        }
       } else {
         const errorData = await response.json().catch(() => ({ message: "Erro desconhecido" }));
         console.error("Erro na resposta:", errorData);
@@ -288,7 +294,7 @@ function Inicio() {
                 <div className="mapa-container">
                   <iframe
                     title="Mapa de UPAs"
-                    src={`http://127.0.0.1:8000/mapa?endereco=${encodeURIComponent(cepInput)}`}
+                    src={`https://e14f-2804-14c-65c1-48de-00-1005.ngrok-free.app/mapa?endereco=${encodeURIComponent(cepInput)}`}
                     width="100%"
                     height="300"
                     frameBorder="0"
