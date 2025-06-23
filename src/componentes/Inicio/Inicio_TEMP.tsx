@@ -13,17 +13,6 @@ interface AvaliacaoResponse {
   avaliacao: string;
 }
 
-// Interface para as UPAs
-interface UPA {
-  nome: string;
-  endereco: string;
-  lat: number;
-  lon: number;
-  distancia?: number;
-  telefone?: string;
-  horario?: string;
-}
-
 function Inicio() {
   const [form, setForm] = useState({
     genero: "",
@@ -34,54 +23,34 @@ function Inicio() {
     areat: "",
     casat: "",
   });
+  
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [resultadoConsulta, setResultadoConsulta] = useState<AvaliacaoResponse | null>(null);
   const [upasModalOpen, setUpasModalOpen] = useState(false);
-  const [upasProximas, setUpasProximas] = useState<UPA[]>([]);  const [loadingUpas, setLoadingUpas] = useState(false);
-  const [enderecoModalOpen, setEnderecoModalOpen] = useState(false);
-  const [cepInput, setCepInput] = useState("");
-  const [mapaVisible, setMapaVisible] = useState("");
-  const [upaSelecionada, setUpaSelecionada] = useState<UPA | null>(null);
+  const [upasProximas, setUpasProximas] = useState<any[]>([]);
+  const [loadingUpas, setLoadingUpas] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+
   // Função para buscar UPAs próximas
   const buscarUpasProximas = async () => {
-    // Abrir modal para solicitar CEP
-    setCepInput("");
-    setEnderecoModalOpen(true);
-  };
-
-  // Função para exibir o mapa de uma UPA específica
-  const mostrarMapa = (endereco: string, upa: UPA | null = null) => {
-    const encodedEndereco = encodeURIComponent(endereco);
-    const url = `http://127.0.0.1:8000/mapa?endereco=${encodedEndereco}`;
-    setMapaVisible(url);
-    setUpaSelecionada(upa);
-  };
-
-  // Função para confirmar busca de UPAs após inserir CEP
-  const confirmarBuscaUpas = async () => {
-    if (!cepInput || cepInput.trim() === "") {
-      alert("Por favor, digite um CEP válido.");
+    if (!resultadoConsulta?.area) {
+      alert("Endereço não encontrado. Faça uma nova consulta.");
       return;
     }
 
-    setEnderecoModalOpen(false);
     setLoadingUpas(true);
     setUpasProximas([]);
 
     try {
-      // Usa apenas o CEP para busca
-      const cepFormatado = cepInput.trim().replace(/[^0-9]/g, '');
+      // URL do seu backend FastAPI
+      const url = `http://127.0.0.1:8000/upas-proximas?endereco=${encodeURIComponent(resultadoConsulta.area)}&raio=10`;
       
-      // Passa apenas o CEP para a API de busca de UPAs
-      const url = `http://127.0.0.1:8000/upas-proximas?endereco=${encodeURIComponent(cepFormatado)}&raio=20`;
-
-      console.log("Buscando UPAs com o CEP:", cepFormatado);
-
+      console.log("Buscando UPAs em:", url);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -116,19 +85,18 @@ function Inicio() {
     areat: string;
     casat: string;
   }) => {
-    const generoConvertido = formData.genero === "Masculino" ? "Male" :
-                            formData.genero === "Feminino" ? "Female" :
+    const generoConvertido = formData.genero === "Masculino" ? "Male" : 
+                            formData.genero === "Feminino" ? "Female" : 
                             formData.genero;
-
-    const areatConvertido = formData.areat === "Desenvolvida" ? "developed" :
-                           formData.areat === "Subdesenvolvida" ? "undeveloped" :
+                            
+    const areatConvertido = formData.areat === "Desenvolvida" ? "developed" : 
+                           formData.areat === "Subdesenvolvida" ? "undeveloped" : 
                            formData.areat;
 
-    // Correção na representação dos tipos de casa
-    const casatConvertido = formData.casat === "Casa de Madeira" ? "Tinshed" :
-                           formData.casat === "Casa de Alvenaria" ? "Building" :
+    const casatConvertido = formData.casat === "Casa Simples" ? "Tinshed" : 
+                           formData.casat === "Casa" ? "Building" : 
                            formData.casat;
-
+    
     return {
       ...formData,
       genero: generoConvertido,
@@ -142,10 +110,10 @@ function Inicio() {
     setLoading(true);
     setModalOpen(false);
     setResultadoConsulta(null);
-
+    
     try {
       const formParaBackend = converterValoresParaBackend(form);
-
+      
       const params = new URLSearchParams({
         genero: formParaBackend.genero,
         idade: formParaBackend.idade,
@@ -158,7 +126,7 @@ function Inicio() {
 
       const url = `http://127.0.0.1:8000/avaliar?${params}`;
       console.log("Fazendo requisição para:", url);
-
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -190,73 +158,171 @@ function Inicio() {
     <>
       {/* Modal de Loading */}
       {loading && (
-        <div className="modal-loading">
-          <div className="modal-loading-content">
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              padding: "2rem",
+              borderRadius: "12px",
+              fontSize: "1.2rem",
+              textAlign: "center",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "1rem",
+              animation: "fadeIn 0.3s ease-out",
+            }}
+          >
             {/* Spinner animado */}
-            <div className="spinner"></div>
-            <div className="loading-text">
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                border: "4px solid #f3f3f3",
+                borderTop: "4px solid #007bff",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+              }}
+            ></div>
+            <div style={{ color: "#333", fontWeight: "500" }}>
               Analisando seus dados...
             </div>
           </div>
         </div>
       )}
-
+      
       {/* Modal de Resposta Estruturada */}
       {modalOpen && resultadoConsulta && (
-        <div className="modal-resultado">
-          <div className="modal-resultado-content">
-            <h2>Resultado da Avaliação</h2>
-            <div className="dados-container">
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              padding: "2rem",
+              borderRadius: "8px",
+              minWidth: "320px",
+              maxWidth: "90vw",
+              textAlign: "center",
+              boxShadow: "0 2px 16px #0002",
+            }}
+          >
+            <h2 style={{ marginBottom: "1rem", color: "#333" }}>Resultado da Avaliação</h2>
+            <div style={{ textAlign: "left", marginBottom: "1.5rem" }}>
               {/* Dados do Paciente */}
-              <div className="dados-paciente">
-                <h4>Dados Informados:</h4>
-                <div className="dados-grid">
+              <div style={{ marginBottom: "1rem", padding: "1rem", backgroundColor: "#f8f9fa", borderRadius: "6px" }}>
+                <h4 style={{ margin: "0 0 0.5rem 0", color: "#495057" }}>Dados Informados:</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.9rem" }}>
                   <div><strong>Gênero:</strong> {
-                    resultadoConsulta.genero === "Male" ? "Masculino" :
-                    resultadoConsulta.genero === "Female" ? "Feminino" :
+                    resultadoConsulta.genero === "Male" ? "Masculino" : 
+                    resultadoConsulta.genero === "Female" ? "Feminino" : 
                     resultadoConsulta.genero
                   }</div>
                   <div><strong>Idade:</strong> {resultadoConsulta.idade} anos</div>
                   <div><strong>IgG:</strong> {resultadoConsulta.igg}</div>
                   <div><strong>IgM:</strong> {resultadoConsulta.igm}</div>
                 </div>
-                <div className="dados-endereco">
+                <div style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>
                   <div><strong>Área:</strong> {resultadoConsulta.area}</div>
                   <div><strong>Tipo de área:</strong> {
-                    resultadoConsulta.areat === "developed" ? "Desenvolvida" :
-                    resultadoConsulta.areat === "undeveloped" ? "Subdesenvolvida" :
+                    resultadoConsulta.areat === "developed" ? "Desenvolvida" : 
+                    resultadoConsulta.areat === "undeveloped" ? "Subdesenvolvida" : 
                     resultadoConsulta.areat
                   }</div>
                   <div><strong>Tipo de casa:</strong> {
-                    resultadoConsulta.casat === "Tinshed" ? "Casa de Madeira" :
-                    resultadoConsulta.casat === "Building" ? "Casa de Alvenaria" :
+                    resultadoConsulta.casat === "Tinshed" ? "Casa Simples" : 
+                    resultadoConsulta.casat === "Building" ? "Casa" : 
                     resultadoConsulta.casat
                   }</div>
                 </div>
               </div>
-
+              
               {/* Resultado da Avaliação */}
-              <div className="avaliacao-container">
-                <h4>Avaliação:</h4>
-                <p className="avaliacao-texto">
+              <div style={{ 
+                padding: "1rem", 
+                backgroundColor: "#e8f4fd", 
+                borderRadius: "6px",
+                border: "1px solid #bee5eb"
+              }}>
+                <h4 style={{ margin: "0 0 0.5rem 0", color: "#0c5460" }}>Avaliação:</h4>
+                <p style={{ 
+                  margin: 0, 
+                  fontSize: "1rem", 
+                  lineHeight: "1.4",
+                  color: "#0c5460",
+                  fontWeight: "500"
+                }}>
                   {resultadoConsulta.avaliacao}
                 </p>
               </div>
             </div>
-
+            
             {/* Container dos botões */}
-            <div className="botoes-container">
+            <div style={{ 
+              display: "flex", 
+              gap: "1rem", 
+              marginTop: "1.5rem",
+              justifyContent: "center",
+              flexWrap: "wrap"
+            }}>
               <button
                 onClick={buscarUpasProximas}
                 disabled={loadingUpas}
-                className="btn-upas"
+                style={{ 
+                  padding: "0.75rem 2rem",
+                  backgroundColor: "#28a745",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: loadingUpas ? "not-allowed" : "pointer",
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                  opacity: loadingUpas ? 0.6 : 1,
+                  minWidth: "160px"
+                }}
               >
                 {loadingUpas ? "Buscando..." : "🏥 Ver UPAs Próximas"}
               </button>
-
+              
               <button
                 onClick={() => setModalOpen(false)}
-                className="btn-fechar"
+                style={{ 
+                  padding: "0.75rem 2rem",
+                  backgroundColor: "#007bff",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                  minWidth: "160px"
+                }}
               >
                 Fechar
               </button>
@@ -264,188 +330,110 @@ function Inicio() {
           </div>
         </div>
       )}
-
+      
       {/* Modal de UPAs Próximas */}
       {upasModalOpen && (
-        <div className="modal-upas">
-          <div className="modal-upas-content">
-            <h2>
-              🏥 UPAs Próximas (até 20km)
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1100,
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              padding: "2rem",
+              borderRadius: "12px",
+              minWidth: "500px",
+              maxWidth: "90vw",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              textAlign: "center",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+              animation: "fadeIn 0.3s ease-out",
+            }}
+          >
+            <h2 style={{ marginBottom: "1rem", color: "#333" }}>
+              🏥 UPAs Próximas (até 10km)
             </h2>
+            
             {upasProximas.length === 0 ? (
-              <div className="upas-empty">
-                <p>Nenhuma UPA encontrada em um raio de 20km do seu endereço.</p>
-                <p>
+              <div style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
+                <p>Nenhuma UPA encontrada em um raio de 10km do seu endereço.</p>
+                <p style={{ fontSize: "0.9rem", marginTop: "0.5rem" }}>
                   Tente verificar se o endereço está correto ou consulte os serviços de saúde da sua região.
                 </p>
               </div>
-            ) : (              <div className="upas-list-container">
-                <p className="upas-count">
+            ) : (
+              <div style={{ textAlign: "left", marginBottom: "1.5rem" }}>
+                <p style={{ textAlign: "center", marginBottom: "1rem", color: "#666" }}>
                   Encontramos {upasProximas.length} UPA{upasProximas.length > 1 ? 's' : ''} próxima{upasProximas.length > 1 ? 's' : ''} ao seu endereço:
                 </p>
-
-                {/* Exibir o mapa embutido com todas as UPAs */}
-                <div className="mapa-container">
-                  <iframe
-                    title="Mapa de UPAs"
-                    src={`http://127.0.0.1:8000/mapa?endereco=${encodeURIComponent(cepInput)}`}
-                    width="100%"
-                    height="300"
-                    frameBorder="0"
-                    style={{ borderRadius: '8px', marginBottom: '20px' }}
-                  ></iframe>
-                </div>
-
-                <div className="upas-grid">
+                
+                <div style={{ display: "grid", gap: "1rem", maxHeight: "300px", overflowY: "auto" }}>
                   {upasProximas.map((upa, index) => (
-                    <div key={index} className="upa-card">
-                      <h4>
+                    <div
+                      key={index}
+                      style={{
+                        padding: "1rem",
+                        border: "1px solid #e0e0e0",
+                        borderRadius: "8px",
+                        backgroundColor: "#f8f9fa",
+                        borderLeft: "4px solid #007bff",
+                      }}
+                    >
+                      <h4 style={{ margin: "0 0 0.5rem 0", color: "#007bff" }}>
                         {upa.nome || `UPA ${index + 1}`}
                       </h4>
-                      <p>
+                      <p style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>
                         <strong>📍 Endereço:</strong> {upa.endereco || "Não informado"}
                       </p>
                       {upa.telefone && (
-                        <p>
+                        <p style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>
                           <strong>📞 Telefone:</strong> {upa.telefone}
                         </p>
                       )}
                       {upa.distancia && (
-                        <p className="upa-distancia">
+                        <p style={{ margin: "0.25rem 0", fontSize: "0.9rem", color: "#28a745", fontWeight: "500" }}>
                           <strong>📏 Distância:</strong> {upa.distancia} km
-                        </p>                      )}
+                        </p>
+                      )}
                       {upa.horario && (
-                        <p>
+                        <p style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>
                           <strong>🕒 Horário:</strong> {upa.horario}
                         </p>
                       )}
-
-                      {/* Botão para ver mapa específico da UPA */}
-                      <button
-                        onClick={() => mostrarMapa(upa.endereco, upa)}
-                        className="btn-ver-mapa"
-                      >
-                        🗺️ Ver no mapa
-                      </button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-
-            {/* Container de botões na parte inferior */}
-            <div className="botoes-navegacao">
-              <button
-                onClick={() => setUpasModalOpen(false)}
-                className="btn-fechar-upas"
-              >
-                Fechar
-              </button>
-
-              <button
-                onClick={() => {
-                  setUpasModalOpen(false);
-                  setModalOpen(false);
-                  // Resetar formulário se necessário
-                  setForm({
-                    genero: "",
-                    idade: "",
-                    igg: "",
-                    igm: "",
-                    area: "",
-                    areat: "",
-                    casat: "",
-                  });
-                }}
-                className="btn-voltar-inicio"
-              >
-                ↩️ Voltar ao Início
-              </button>
-            </div>
-          </div>
-        </div>      )}
-
-      {/* Modal de Mapa em Tela Cheia */}
-      {mapaVisible && (
-        <div className="modal-mapa-fullscreen">
-          <div className="modal-mapa-content">
-            <div className="mapa-header">
-              <h3>
-                {upaSelecionada
-                  ? `Rota para: ${upaSelecionada.nome}`
-                  : "Mapa das UPAs próximas"}
-              </h3>
-              <button
-                onClick={() => setMapaVisible("")}
-                className="btn-fechar-mapa"
-              >
-                ✖️
-              </button>
-            </div>
-
-            <div className="mapa-iframe-container">
-              <iframe
-                title="Mapa de UPAs"
-                src={mapaVisible}
-                width="100%"
-                height="100%"
-                frameBorder="0"
-              ></iframe>
-            </div>
-
-            {upaSelecionada && (
-              <div className="upa-detalhes">
-                <h4>{upaSelecionada.nome}</h4>
-                <p><strong>Endereço:</strong> {upaSelecionada.endereco}</p>
-                {upaSelecionada.distancia && (
-                  <p><strong>Distância:</strong> {upaSelecionada.distancia} km</p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Solicitar CEP */}
-      {enderecoModalOpen && (
-        <div className="modal-endereco">
-          <div className="modal-endereco-content">
-            <h3>
-              📍 Digite seu CEP
-            </h3>
-            <p>
-              Para buscar UPAs próximas, informe seu CEP:
-            </p>
-
-            <input
-              type="text"
-              value={cepInput}
-              onChange={(e) => setCepInput(e.target.value)}
-              placeholder="Ex: 70000-000"
-              className="cep-input-large"
-              style={{ width: '100%', padding: '10px', fontSize: '16px', marginBottom: '20px' }}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  confirmarBuscaUpas();
-                }
+            
+            <button
+              onClick={() => setUpasModalOpen(false)}
+              style={{ 
+                marginTop: "1rem", 
+                padding: "0.75rem 2rem",
+                backgroundColor: "#6c757d",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "1rem",
+                fontWeight: "500"
               }}
-            />
-
-            <div className="endereco-botoes">
-              <button
-                onClick={confirmarBuscaUpas}
-                className="btn-buscar"
-              >
-                🔍 Buscar UPAs por CEP
-              </button>
-
-              <button
-                onClick={() => setEnderecoModalOpen(false)}
-                className="btn-cancelar"
-              >
-                Cancelar
-              </button>
-            </div>
+            >
+              Fechar
+            </button>
           </div>
         </div>
       )}
@@ -453,7 +441,7 @@ function Inicio() {
       <div className="container">
         <h3>
           Faça sua consulta no info-dengue com seus exames <br />
-          para averiguar se você possa estar contaminado.
+          para haveriguar se você possa estar contaminado.
         </h3>
         <form onSubmit={handleSubmit}>
           <div className="inputs">
@@ -528,8 +516,8 @@ function Inicio() {
               required
             >
               <option value="">Selecione o tipo de casa</option>
-              <option value="Casa de Madeira">Casa de Madeira</option>
-              <option value="Casa de Alvenaria">Casa de Alvenaria</option>
+              <option value="Casa Simples">Casa Simples</option>
+              <option value="Casa">Casa</option>
             </select>
           </div>
           <div className="botao">
